@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SDE Collaborative Whiteboard v2</title>
+    <style>
+        body { margin: 0; padding: 20px; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background: #f4f4f4; }
+        .controls { margin-bottom: 10px; }
+        canvas { border: 2px solid #333; background: #fff; cursor: crosshair; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; background: #ff4757; color: white; border: none; border-radius: 5px; }
+        button:hover { background: #ff6b81; }
+    </style>
+</head>
+<body>
+
+    <div class="controls">
+        <button onclick="clearBoard()">Clear Whiteboard</button>
+    </div>
+
+    <canvas id="canvas" width="800" height="600"></canvas>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const socket = io();
+
+        let drawing = false;
+
+        // Initialize pen styles
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = '#000';
+
+        function getCoords(e) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                // sending percentages
+                x: (e.clientX - rect.left) / canvas.width,
+                y: (e.clientY - rect.top) / canvas.height
+            };
+        }
+
+        // --- OUTGOING EVENTS ---
+
+        canvas.onmousedown = (e) => {
+            drawing = true;
+            const coords = getCoords(e);
+            const data = { ...coords, type: 'start' };
+            socket.emit('draw', data);
+            handleDraw(data);
+        };
+
+        canvas.onmousemove = (e) => {
+            if (!drawing) return;
+            const coords = getCoords(e);
+            const data = { ...coords, type: 'move' };
+            socket.emit('draw', data);
+            handleDraw(data);
+        };
+
+        window.onmouseup = () => {
+            if (!drawing) return;
+            drawing = false;
+            const data = { type: 'end' };
+            socket.emit('draw', data);
+            handleDraw(data);
+        };
+
+        function clearBoard() {
+            socket.emit('clear');
+        }
+
+        // --- INCOMING EVENTS ---
+
+        // Load full history when joining
+        socket.on('history', (historyData) => {
+            console.log("Syncing history...");
+            historyData.forEach(event => handleDraw(event));
+        });
+
+        // Listen for new drawing events from others
+        socket.on('draw', (data) => handleDraw(data));
+
+        // Listen for global clear command
+        socket.on('clear', () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        });
+
+        // --- CORE RENDERING ENGINE ---
+
+        function handleDraw(data) {
+            const x = data.x * canvas.width;
+            const y = data.y * canvas.height;   
+            const type = data.type;
+
+            if (type === 'start') {
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+            } else if (type === 'move') {
+                ctx.lineTo(x, y);
+                ctx.stroke();
+            } else if (type === 'end') {
+                ctx.beginPath(); // Reset state for safety
+            }
+        }
+    </script>
+</body>
+</html>
