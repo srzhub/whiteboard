@@ -36,7 +36,7 @@ The system follows an **Event-Driven Architecture**:
 
 1. **Clone the repo:**
 ```bash
-git clone https://github.com/YOUR_USERNAME/whiteboard-pro.git
+git clone https://github.com/srzhub/whiteboard.git
 
 ```
 
