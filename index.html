@@ -13,19 +13,44 @@
 </head>
 <body>
 
+    // Controls for pen color and size
     <div class="controls">
         <button onclick="clearBoard()">Clear Whiteboard</button>
+        <input type="color" id="colorPicker" value="#000000">
+        <input type="range" id="sizeSlider" min="1" max="20" value="2">
+        <label>Size</label>
+        <button id="eraserBtn" onclick="toggleEraser()" style="background: #2f3542;">Eraser: OFF</button>
     </div>
+
+    <div class="status-bar" style="margin-bottom: 10px; font-weight: bold; color: #57606f;">
+        Online Users: <span id="userCount">1</span>
+    </div>
+
+    <h3>Current Room: <span id="roomDisplay"></span></h3>
+
 
     <canvas id="canvas" width="800" height="600"></canvas>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
+        
+        // Check URL for ?room=xyz, otherwise default to 'general'
+        const urlParams = new URLSearchParams(window.location.search);
+        const roomName = urlParams.get('room') || 'general';
+        document.getElementById('roomDisplay').innerText = roomName;
+
+        // Tell the server we want to join this room
+        console.log("Client: Target room is", roomName);        
+
         const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-        const socket = io();
+        const ctx = canvas.getContext('2d'); // HTML 5 Canvas API for drawing
+        const socket = io(); // initialise socket connection
+
+        const colorPicker = document.getElementById('colorPicker'); // get color picker
+        const sizeSlider = document.getElementById('sizeSlider');   // get size slider
 
         let drawing = false;
+        let isEraser = false;
 
         // Initialize pen styles
         ctx.lineWidth = 2;
@@ -33,21 +58,44 @@
         ctx.lineJoin = 'round';
         ctx.strokeStyle = '#000';
 
+        // Getting normlaised coordinates (0 to 1) for better cross-device compatibilty
         function getCoords(e) {
-            const rect = canvas.getBoundingClientRect();
+            const rect = canvas.getBoundingClientRect(); // Get coordinates of canvas, not screen
             return {
                 // sending percentages
                 x: (e.clientX - rect.left) / canvas.width,
                 y: (e.clientY - rect.top) / canvas.height
             };
         }
+        
+        // UI changes when toggling eraser mode
+        function toggleEraser(){
+            isEraser = !isEraser;
+            const btn = document.getElementById('eraserBtn');
+
+            btn.innerText = isEraser? "Eraser: ON" : "Eraser: OFF";
+            btn.style.background = isEraser ? "#747d8c" : "#2f3542";
+        }
+
+        socket.on('userCount', (count) => {
+            document.getElementById('userCount').innerText = count;
+        });
+
+        socket.emit('join', roomName);
 
         // --- OUTGOING EVENTS ---
 
         canvas.onmousedown = (e) => {
             drawing = true;
             const coords = getCoords(e);
-            const data = { ...coords, type: 'start' };
+
+            const data = { 
+                ...coords,
+                 type: 'start',
+                 color: isEraser? "#ffffff" : colorPicker.value,
+                 width: isEraser ? 20 : sizeSlider.value
+             };
+
             socket.emit('draw', data);
             handleDraw(data);
         };
@@ -55,7 +103,14 @@
         canvas.onmousemove = (e) => {
             if (!drawing) return;
             const coords = getCoords(e);
-            const data = { ...coords, type: 'move' };
+
+            const data = {
+                 ...coords,
+                  type: 'move',
+                  color: isEraser? "#ffffff":colorPicker.value,
+                  width: isEraser ? 20 : sizeSlider.value
+                 };
+
             socket.emit('draw', data);
             handleDraw(data);
         };
@@ -95,12 +150,17 @@
             const y = data.y * canvas.height;   
             const type = data.type;
 
+            if(data.color) ctx.strokeStyle = data.color;
+            if(data.width) ctx.lineWidth = data.width;
+
             if (type === 'start') {
                 ctx.beginPath();
                 ctx.moveTo(x, y);
+
             } else if (type === 'move') {
                 ctx.lineTo(x, y);
                 ctx.stroke();
+
             } else if (type === 'end') {
                 ctx.beginPath(); // Reset state for safety
             }
