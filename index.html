@@ -32,12 +32,17 @@
     <canvas id="canvas" width="800" height="600"></canvas>
 
     <script src="/socket.io/socket.io.js"></script>
+
+
+
     <script>
         
         // Check URL for ?room=xyz, otherwise default to 'general'
         const urlParams = new URLSearchParams(window.location.search);
         const roomName = urlParams.get('room') || 'general';
         document.getElementById('roomDisplay').innerText = roomName;
+
+        if(!roomName) window.location.href = '/';
 
         // Tell the server we want to join this room
         console.log("Client: Target room is", roomName);        

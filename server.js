@@ -3,14 +3,24 @@ const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
 
+const path = require('path');
+
 // This array stores every draw event since the server started.
 // In production, use Redis or a Database to avoid RAM overflow.
 let roomData = {}; 
-
-// Serve (route) the static HTML file when anyone acceses root URL
-app.get('/', (req, res) => res.sendFile(__dirname + '/index.html'));
-
 let userCount = 0;
+
+// send to lobby
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'lobby.html'));
+});
+
+// 2. Route for the Whiteboard
+app.get('/whiteboard', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+
 // Fires every time a new user connects to the server via Socket.IO
 io.on('connection', (socket) => {
 

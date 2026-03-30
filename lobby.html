@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Whiteboard Lobby</title>
+    <style>
+        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f0f2f5; margin: 0; }
+        .container { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; width: 350px; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; font-size: 16px; }
+        button { width: 100%; padding: 12px; margin: 5px 0; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; transition: 0.2s; }
+        .btn-join { background: #341f97; color: white; }
+        .btn-join:hover { background: #5f27cd; }
+        .btn-create { background: #10ac84; color: white; }
+        .btn-create:hover { background: #1dd1a1; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>SDE Whiteboard</h1>
+        <p>Join a room to start collaborating</p>
+        
+        <input type="text" id="roomInput" placeholder="Enter Room Name (e.g. dtu-cse)">
+        <button class="btn-join" onclick="joinRoom()">Join Room</button>
+        
+        <div style="margin: 20px 0; color: #aaa;">OR</div>
+        
+        <button class="btn-create" onclick="createRoom()">Create Random Room</button>
+    </div>
+
+    <script>
+        function joinRoom() {
+            const room = document.getElementById('roomInput').value.trim();
+            if (room) {
+                // Redirect to whiteboard page with the room name in the URL
+                window.location.href = `/whiteboard?room=${encodeURIComponent(room)}`;
+            } else {
+                alert("Please enter a room name!");
+            }
+        }
+
+        function createRoom() {
+            // Generate a random 6-character alphanumeric string
+            const randomID = Math.random().toString(36).substring(2, 8);
+            window.location.href = `/whiteboard?room=${randomID}`;
+        }
+    </script>
+</body>
+</html>
