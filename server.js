@@ -7,13 +7,18 @@ const path = require('path');
 
 // This array stores every draw event since the server started.
 // In production, use Redis or a Database to avoid RAM overflow.
+
 let roomData = {}; 
-let userCount = 0;
+let userCount = 0; // Keep a count of global users, across all rooms
+
 
 // send to lobby
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'lobby.html'));
 });
+
+app.use(express.static(__dirname)); // so that express can read static files
+
 
 // 2. Route for the Whiteboard
 app.get('/whiteboard', (req, res) => {
@@ -27,7 +32,7 @@ io.on('connection', (socket) => {
     userCount++;
     io.emit('userCount', userCount) // brodcast number of users to all
     console.log('A user connected. Current number of rooms:', Object.keys(roomData).length);
-
+    
     socket.on('join', (roomName) => {
         socket.join(roomName);
         socket.currentRoom = roomName;
