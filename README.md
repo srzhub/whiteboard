@@ -1,66 +1,69 @@
+# Collaborative Whiteboard Engine
 
-# Real-Time Collaborative Whiteboard Engine
-
-A high-performance, bi-directional synchronization engine built with **Node.js** and **Socket.io**. This project focuses on solving the core challenges of distributed state management and real-time data consistency in a multi-user environment.
-
-##  Technical Highlights
-
-* **Stateful Synchronization Protocol:** Engineered a custom "Pen-State" event model (Start/Move/End) to manage HTML5 Canvas paths, preventing state desynchronization and "ghost paths" across clients.
-* **Server-Side Event Buffering:** Implemented a history persistence layer to ensure that late-joining users receive a seamless state replay of all existing drawing data.
-* **Coordinate Normalization:** Developed logic to scale coordinates relative to viewport dimensions (0.0 to 1.0), ensuring cross-browser rendering consistency regardless of screen resolution.
-* **Full-Duplex Communication:** Leveraged WebSockets to achieve sub-100ms latency, far outperforming traditional HTTP polling methods in high-concurrency scenarios.
+A real-time, multi-user drawing application designed to handle concurrent strokes across varying screen resolutions. This project explores the implementation of WebSockets for low-latency data synchronization and the challenges of maintaining distributed state in a web environment.
 
 ---
 
-##  Architecture
+## Core Features
 
-The system follows an **Event-Driven Architecture**:
+* **Multi-Tenant Room Logic:** Utilizes URL parameters to partition users into specific sessions. This ensures that drawing data is isolated to relevant peers, preventing global network congestion.
+* **Resolution-Independent Coordinates:** Implemented coordinate normalization by converting raw mouse pixels into relative percentages (0.0 to 1.0). This allows a stroke made on a high-resolution monitor to render accurately on a smaller mobile or laptop screen.
+* **State Reconstruction (History Replay):** The server maintains an in-memory buffer of all drawing events. When a new user joins an existing room, the server emits the full history, allowing the client to reconstruct the current board state immediately.
+* **Path State Management:** Uses a Start-Move-End event model to control the HTML5 Canvas state machine. This prevents "ghost paths"—accidental lines connecting separate strokes—by explicitly resetting paths during the mouse-up event.
 
-1. **Client A** triggers a mouse event.
-2. **Normalization Logic** converts raw pixels to relative percentages.
-3. **Socket.io Client** emits the data payload to the server.
-4. **Node.js Server** receives the payload, appends it to the **History Buffer**, and broadcasts it to all other connected clients.
-5. **Client B** receives the broadcast and executes the **Rendering Engine** to update the canvas locally.
+---
+
+## Technical Implementation
+
+### Bi-directional Communication
+The application leverages **Socket.io** to establish a persistent WebSocket connection. Unlike standard HTTP requests, which incur overhead from repeated headers and TCP handshakes, WebSockets allow for a continuous stream of coordinate data with minimal latency.
+
+### The Rendering Engine
+The frontend treats the Canvas API as a state-driven system. 
+1. **Capture:** Detects mouse movement and normalizes coordinates.
+2. **Emission:** Sends a JSON payload containing coordinates, stroke color, and brush width.
+3. **Broadcast:** The server relays this data to all other clients in the room using a broadcast method that excludes the sender to prevent redundant local rendering.
+
+---
+
+## Architecture
+
+1. **Client A** triggers a drawing event.
+2. **Normalization Logic** scales the coordinates.
+3. **Socket.io** emits the payload to the Node.js backend.
+4. **Server** validates the room ID, appends the data to the room's history, and broadcasts the update.
+5. **Client B** receives the event and executes the drawing logic to update the local canvas.
 
 ---
 
 ## Tech Stack
 
 * **Backend:** Node.js, Express
-* **Real-Time Engine:** Socket.io (WebSockets)
-* **Frontend:** JavaScript (ES6+), HTML5 Canvas API, CSS3
+* **Communication:** Socket.io (WebSockets)
+* **Frontend:** Vanilla JavaScript (ES6+), HTML5 Canvas API, CSS3
 
 ---
 
-## How to Run
+## Development Roadmap
 
-1. **Clone the repo:**
-```bash
-git clone https://github.com/srzhub/whiteboard.git
-
-```
-
-
-2. **Install dependencies:**
-```bash
-npm install
-
-```
-
-
-3. **Start the server:**
-```bash
-npm start
-
-```
-
-
-4. **Open in Browser:** Visit `http://localhost:3000`. Open multiple tabs to test real-time synchronization.
+* **Redis Integration:** Transition from in-memory object storage to a Redis-backed cache. This will allow the application to persist data across server restarts and scale horizontally across multiple instances.
+* **Network Throttling:** Implement a client-side throttle to limit event emission to 60 frames per second, reducing server load during high-frequency drawing.
+* **Conflict Resolution:** Researching the implementation of CRDTs (Conflict-free Replicated Data Types) for more complex object manipulations and undo/redo functionality.
 
 ---
 
-##  Future Roadmap (Scalability)
+## Setup and Installation
 
-* **Persistence:** Integrate **Redis** as a message broker and state store to scale horizontally across multiple server instances.
-* **Conflict Resolution:** Implement **CRDTs (Conflict-free Replicated Data Types)** or Operational Transformation for complex object manipulation.
-* **Optimization:** Implement **Binary Serialization (Protobufs)** to reduce network payload size by ~60% compared to JSON.
+1. **Install Dependencies:**
+   ```bash
+   npm install
+   ```
+
+2. **Run the Server:**
+   ```bash
+   node server.js
+   ```
+
+3. **Access the Application:**
+   Open `http://localhost:3000` in multiple browser tabs to test real-time collaboration.
+
